@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "notification-manhwa-bot"
+version = "0.1.0"
+description = ""
+authors = ["Dmytro Filin <dmitriy.fillin@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pytelegrambotapi = "^4.14.1"
+selenium = "^4.16.0"
+webdriver-manager = "^4.0.1"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
