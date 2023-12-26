@@ -12,6 +12,8 @@ pytelegrambotapi = "^4.14.1"
 selenium = "^4.16.0"
 webdriver-manager = "^4.0.1"
 python-dotenv = "^1.0.0"
+python-telegram-bot = "^20.7"
+schedule = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

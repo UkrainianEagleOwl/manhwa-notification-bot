@@ -5,27 +5,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
-import os
-from dotenv import load_dotenv
+import logging
 
-load_dotenv()
 
-# User credentials (you'll want to secure these, perhaps using environment variables)
-username = os.getenv("WORK_USER_LOGIN")
-password = os.getenv("WORK_USER_PASSWORD")
-
-# Set up the ChromeDriver options
-options = Options()
-options.add_argument(
-    "--headless"
-)  # Run in headless mode, if you don't need a browser UI
-options.add_argument("--disable-gpu")
-options.add_argument("--no-sandbox")
-
-# Initialize a new browser session with ChromeDriverManager
-driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()), options=options
-)
+logger = logging.getLogger(__name__)
 
 
 def login(driver, username, password):
@@ -52,45 +35,58 @@ def login(driver, username, password):
 
 
 def scrape_bookmarks(driver):
-    # Navigate to the bookmarks page
     driver.get("https://manga-scans.com/bookmarks/")
-
-    # Wait for the page elements to load
     time.sleep(2)
-
-    # Locate the bookmark elements using the class 'unit'
     bookmarks = driver.find_elements(By.CLASS_NAME, "unit")
 
-    # Loop through the bookmark elements and extract the details
+    bookmarks_data = []
     for bookmark in bookmarks:
-        # Extract the link to the manga (href attribute of an anchor tag with the class 'poster')
-        link = bookmark.find_element(By.CLASS_NAME, "poster").get_attribute("href")
+        try:
+            link = bookmark.find_element(By.CLASS_NAME, "poster").get_attribute("href")
+            image = bookmark.find_element(By.CSS_SELECTOR, ".poster img").get_attribute(
+                "src"
+            )
+            title = bookmark.find_element(By.CSS_SELECTOR, ".info a").text
+            chapter_title = bookmark.find_element(By.CLASS_NAME, "richdata").text
+            last_update = bookmark.find_element(By.CLASS_NAME, "dropdown").text
 
-        # Extract the image (src attribute of an img tag within a div with the class 'poster')
-        image = bookmark.find_element(By.CSS_SELECTOR, ".poster img").get_attribute(
-            "src"
-        )
+            bookmarks_data.append(
+                {
+                    "title": title,
+                    "link": link,
+                    "chapter_title": chapter_title,
+                    "last_update": last_update,
+                    "image": image,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error processing a bookmark: {e}")
 
-        # Extract the title (text within the 'info' class, which might be within an anchor tag)
-        title = bookmark.find_element(By.CSS_SELECTOR, ".info a").text
-
-        # Extract the chapter title (text from an element with the class 'richdata')
-        chapter_title = bookmark.find_element(By.CLASS_NAME, "richdata").text
-
-        # Extract the date of the last update (text from a div with the class 'dropdown')
-        last_update = bookmark.find_element(By.CLASS_NAME, "dropdown").text
-
-        # Print the details (or process them as needed)
-        print(
-            f"Title: {title}, Link: {link}, Chapter: {chapter_title}, Last Update: {last_update}"
-        )
+    return bookmarks_data
 
 
-# Login to the website
-login(driver, username, password)
+def format_bookmarks_data(bookmarks_data):
+    formatted_message = ""
+    for bookmark in bookmarks_data:
+        formatted_message += f"Title: {bookmark['title']}\n"
+        formatted_message += f"Chapter: {bookmark['chapter_title']}\n"
+        formatted_message += f"Last Update: {bookmark['last_update']}\n"
+        formatted_message += f"Image: {bookmark['image']}\n"  # Add the image URL
+        formatted_message += f"Link: {bookmark['link']}\n\n"
+    return formatted_message
 
-# Scrape the bookmarks
-scrape_bookmarks(driver)
 
-# Close the browser when done
-driver.quit()
+def setup_driver():
+    # Set up the ChromeDriver options
+    options = Options()
+    options.add_argument(
+        "--headless"
+    )  # Run in headless mode, if you don't need a browser UI
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+
+    # Initialize a new browser session with ChromeDriverManager
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()), options=options
+    )
+    return driver
