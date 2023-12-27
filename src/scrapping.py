@@ -65,15 +65,7 @@ def scrape_bookmarks(driver):
     return bookmarks_data
 
 
-def format_bookmarks_data(bookmarks_data):
-    formatted_message = ""
-    for bookmark in bookmarks_data:
-        formatted_message += f"Title: {bookmark['title']}\n"
-        formatted_message += f"Chapter: {bookmark['chapter_title']}\n"
-        formatted_message += f"Last Update: {bookmark['last_update']}\n"
-        formatted_message += f"Image: {bookmark['image']}\n"  # Add the image URL
-        formatted_message += f"Link: {bookmark['link']}\n\n"
-    return formatted_message
+
 
 
 def setup_driver():
