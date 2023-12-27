@@ -1,20 +1,18 @@
 import logging
 import os
 import threading
-import schedule
-import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
     CallbackContext,
-    ContextTypes,
-    MessageHandler,
-    filters,
 )
 from dotenv import load_dotenv
-from scrapping import setup_driver, login, scrape_bookmarks
+
+from src.scrapping import setup_driver, login, scrape_bookmarks
+from src.utils import format_bookmarks_page, format_update_message, check_for_updates
+from src.shedule_utils import run_schedule
 
 load_dotenv()
 
@@ -32,87 +30,17 @@ password = os.getenv("WORK_USER_PASSWORD")
 bot_context = None
 
 
-def scheduled_check():
-    """
-    The scheduled_check function is a function that checks for updates every day at midnight.
-    If there are any updates, it sends them to the chat ID specified in the SHEDULE_CHAT_ID environment variable.
-
-    :return: A list of updates
-    :doc-author: Trelent
-    """
-    if bot_context:
-        updates = check_for_updates()  # Replace with your actual scraping function
-        if updates:
-            bot_context.bot.send_message(
-                chat_id=os.getenv("SHEDULE_CHAT_ID"),
-                text=f"Daily Updates: {updates}",  # Replace 'your_chat_id' with your actual chat ID
-            )
-
-
-# Run the schedule in a separate thread
-def run_schedule():
-    """
-    The run_schedule function is a simple while loop that runs the schedule.run_pending() function every second.
-    The run_schedule function is called in the main thread of execution, and it will block until all scheduled jobs have been executed.
-
-    :return: The schedule
-    :doc-author: Trelent
-    """
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-
-# Schedule the job
-schedule.every().day.at("09:00").do(scheduled_check)
-
-
-def check_for_updates():
-    """
-    The check_for_updates function checks for updates to the bookmarks on your account.
-    It returns a list of dictionaries, each dictionary containing information about a bookmark that has been updated recently.
-    The keys in each dictionary are: 'title', 'url', and 'last_update'.
-
-
-    :return: A list of dictionaries
-    :doc-author: Trelent
-    """
-    driver = setup_driver()
-    login(driver, username, password)
-    bookmarks_data = scrape_bookmarks(driver)
-    driver.quit()
-
-    recent_updates = []
-    for bookmark in bookmarks_data:
-        # Check if 'last_update' indicates a recent update (within hours or minutes)
-        if "hour" in bookmark["last_update"] or "min" in bookmark["last_update"]:
-            recent_updates.append(bookmark)
-
-    return recent_updates
-
-
-def format_update_message(update):
-    """
-    Formats the details of a manga update into a user-friendly message.
-
-    Args:
-    update (dict): A dictionary containing details about the manga update.
-
-    Returns:
-    str: A formatted message string.
-    """
-    # Constructing the message with HTML formatting for Telegram
-    message = (
-        f"<b>{update['title']}</b>\n"
-        f"Chapter: {update['chapter_title']}\n"
-        f"Updated: {update['last_update']}\n"
-        f"<a href='{update['link']}'>Read Now</a>"
-    )
-    return message
-
-
 # Define the asynchronous start command handler
 async def start(update, context):
+    """
+    The start function is the first function that gets called when a user interacts with the bot.
+    It sends a greeting message and an inline keyboard to choose from different actions.
+
+    :param update: Get the message sent by the user
+    :param context: Pass the context of the message to this function
+    :return: A conversationhandler object
+    :doc-author: Trelent
+    """
     # Friendly greeting message
     greeting_message = "Welcome to MangaMate! 📚✨\nYour personal assistant for staying updated with your favorite Manga. What would you like to do today?"
 
@@ -128,8 +56,17 @@ async def start(update, context):
 
 
 async def check_updates_command(update: Update, context: CallbackContext) -> None:
+    """
+    The check_updates_command function is a callback function that will be called when the user clicks on the &quot;Check for Updates&quot; button.
+    It will check for updates and send them to the user.
+
+    :param update: Update: Get the update object from the callback query
+    :param context: CallbackContext: Pass the context in which this function is called
+    :return: None, so the bot doesn't know what to do with it
+    :doc-author: Trelent
+    """
     query = update.callback_query
-    recent_updates = check_for_updates()
+    recent_updates = check_for_updates(username, password)
 
     # Now use 'query.message' to send a reply
     for manga_update in recent_updates:
@@ -140,6 +77,14 @@ async def check_updates_command(update: Update, context: CallbackContext) -> Non
 
 
 async def list_bookmarks_command(update: Update, context: CallbackContext) -> None:
+    """
+    The list_bookmarks_command function is a callback function that will be called when the user clicks on the &quot;List Bookmarks&quot; button.
+    It will scrape all of the bookmarks from your account and send them to you in paginated form.
+
+    :param update: Update: Get the update object from the callback context
+    :param context: CallbackContext: Pass the context of the function
+    :return: None, so you need to remove the return statement
+    """
     query = update.callback_query  # Get the callback query from the update
     driver = setup_driver()  # Function to set up the Selenium driver
     login(driver, username, password)
@@ -162,15 +107,27 @@ async def error(update: Update, context: CallbackContext) -> None:
             update (Update): The telegram Update object that caused the error.
             context (ext.CallbackContext): The CallbackContext object for this update.
 
-    :param update: Update: Get the update object
-    :param context: ext.CallbackContext: Pass the context in which a handler is being run
-    :return: None, which is the default return value for functions in python
-    :doc-author: Trelent
+    :param update: Update: Get the update object that caused the error
+    :param context: CallbackContext: Pass the context in which a handler is being run
+    :return: None
     """
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 
 def create_pagination_buttons(current_page, total_pages):
+    """
+    The create_pagination_buttons function creates a list of InlineKeyboardButtons
+    for pagination. It takes two arguments: current_page and total_pages.
+    current_page is the page number that the user is currently viewing, while total_pages
+    is the maximum number of pages available for pagination (i.e., if there are 100 items,
+    and each page can display 10 items at most, then there will be 10 pages). The function
+    returns an InlineKeyboardMarkup object containing a list of buttons to be displayed in
+    the Telegram chat window.
+
+    :param current_page: Determine which page we are on
+    :param total_pages: Know how many pages there are in total
+    :return: An inlinekeyboardmarkup object
+    """
     button_list = []
     if total_pages == 0:
         return InlineKeyboardMarkup([])
@@ -198,6 +155,16 @@ def create_pagination_buttons(current_page, total_pages):
 async def send_paginated_bookmarks(
     message: Message, context: CallbackContext, bookmarks, page=0, page_size=10
 ):
+    """
+    The send_paginated_bookmarks function sends a paginated list of bookmarks to the user.
+
+    :param message: Message: Send the paginated bookmarks to the user
+    :param context: CallbackContext: Pass the context of the callback query to this function
+    :param bookmarks: Get the bookmarks to be displayed
+    :param page: Determine which page of bookmarks to display
+    :param page_size: Determine how many bookmarks to display per page
+    :return: The formatted_message
+    """
     # Avoid division by zero if there are no bookmarks
     total_pages = max(
         1, len(bookmarks) // page_size + (1 if len(bookmarks) % page_size else 0)
@@ -205,11 +172,21 @@ async def send_paginated_bookmarks(
     formatted_message = await format_bookmarks_page(bookmarks, page, page_size)
     reply_markup = create_pagination_buttons(page, total_pages)
     await message.reply_text(
-        formatted_message, reply_markup=reply_markup, parse_mode="HTML",disable_web_page_preview=True
+        formatted_message,
+        reply_markup=reply_markup,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
     )
 
 
 async def button(update: Update, context: CallbackContext) -> None:
+    """
+    The button function is used to handle the callback queries from the inline keyboard.
+
+    :param update: Update: Get the update object, which contains information about the incoming update
+    :param context: CallbackContext: Pass the context object to the function
+    :return: None
+    """
     query = update.callback_query
     await query.answer()
 
@@ -253,19 +230,12 @@ async def button(update: Update, context: CallbackContext) -> None:
             )
 
 
-async def format_bookmarks_page(bookmarks, page, page_size):
-    # Calculate the starting and ending indices of the bookmarks for this page
-    page_start = page * page_size
-    page_end = page_start + page_size
-    # Initialize the message with a header
-    message = "<b>Your Bookmarked Mangas:</b>\n\n"
-    # Add each bookmark to the message with HTML formatting for hyperlinks
-    for bookmark in bookmarks[page_start:page_end]:
-        message += f"<a href='{bookmark['link']}'>{bookmark['title']}</a> - Last updated: {bookmark['last_update']}\n"
-    return message
+def run_bot() -> None:
+    """
+    The run_bot function is the main function of this bot. It initializes the bot and starts it.
 
-
-def main() -> None:
+    :return: None so the return type should be none
+    """
     bot_token = os.getenv("BOT_TOKEN")
     application = Application.builder().token(bot_token).build()
 
@@ -286,7 +256,3 @@ def main() -> None:
     # Schedule thread for scheduled tasks
     schedule_thread = threading.Thread(target=run_schedule)
     schedule_thread.start()
-
-
-if __name__ == "__main__":
-    main()
