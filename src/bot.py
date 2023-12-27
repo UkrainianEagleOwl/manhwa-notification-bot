@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 from src.scrapping import setup_driver, login, scrape_bookmarks
 from src.utils import format_bookmarks_page, format_update_message, check_for_updates
-from src.shedule_utils import run_schedule
+from src.schedule_utils import run_schedule
 
 load_dotenv()
 
@@ -256,3 +256,4 @@ def run_bot() -> None:
     # Schedule thread for scheduled tasks
     schedule_thread = threading.Thread(target=run_schedule)
     schedule_thread.start()
+

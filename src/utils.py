@@ -10,7 +10,6 @@ async def format_bookmarks_page(bookmarks, page, page_size):
     :param page: Determine which page of bookmarks to display
     :param page_size: Determine how many bookmarks to show per page
     :return: A string that contains the bookmarks for a page
-    :doc-author: Trelent
     """
     # Calculate the starting and ending indices of the bookmarks for this page
     page_start = page * page_size
@@ -51,7 +50,6 @@ def check_for_updates(username,password):
 
 
     :return: A list of dictionaries
-    :doc-author: Trelent
     """
     driver = setup_driver()
     login(driver, username, password)
