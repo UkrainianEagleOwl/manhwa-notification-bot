@@ -16,7 +16,7 @@ def scheduled_check(bot_context):
         updates = check_for_updates()  # Replace with your actual scraping function
         if updates:
             bot_context.bot.send_message(
-                chat_id=os.getenv("SHEDULE_CHAT_ID"),
+                chat_id=os.getenv("SCHEDULE_CHAT_ID"),
                 text=f"Daily Updates: {updates}",  # Replace 'your_chat_id' with your actual chat ID
             )
 

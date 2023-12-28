@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "notification-manhwa-bot"
+name = "Notti bot"
 version = "0.1.0"
 description = ""
 authors = ["Dmytro Filin <dmitriy.fillin@gmail.com>"]
@@ -15,10 +15,12 @@ python-dotenv = "^1.0.0"
 python-telegram-bot = "^20.7"
 schedule = "^1.2.1"
 
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 pytest-asyncio = "^0.23.2"
+sphinx = "^7.2.6"
 
 [build-system]
 requires = ["poetry-core"]

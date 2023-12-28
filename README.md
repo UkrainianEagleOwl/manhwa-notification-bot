@@ -1,30 +1,67 @@
-# Manhwa Update Notifier Bot
+# Manga Notification Bot
 
 ## About
 The Manhwa Update Notifier Bot is a Telegram bot designed to notify users about new chapters of their bookmarked Manhwa titles. It scrapes updates from a user-specified website and sends a message to the user with the latest chapter information.
 
 ## Features
-- Login to user's account on a Manhwa tracking website.
-- Scrape the latest updates of bookmarked Manhwa.
-- Send a notification through Telegram with the title, image, chapter, and link.
+- **Login to website**:  Login to user's account on a Manhwa tracking website.
+- **Live Manga Updates**: Scrape the latest updates of bookmarked Manhwa and send them to user.
+- **Send schedule notification**: Send a notification through Telegram with the title, image, chapter, and link every day at 09:00 about all updates for the last 24 hours.
 
-## Setup
-1. Install the required Python packages:
-   pip install selenium python-dotenv
-2. Configure your `.env` file with the following variables:
-   - `WORK_USER_LOGIN` - Your login for the Manhwa website.
-   - `WORK_USER_PASSWORD` - Your password for the Manhwa website.
-   - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token.
-   - `TELEGRAM_USER_ID` - Your Telegram user ID to receive notifications.
+## Installation
 
-3. Run the bot:
-   python bot.py
+To set up the Manga Notification Bot, follow these steps:
+
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/UkrainianEagleOwl/manhwa-notification-bot.git
+   cd manhwa-notification-bot
+   ```
+
+2. Install dependencies using [Poetry](https://python-poetry.org/):
+   ```sh
+   poetry install
+   ```
+
+3. Copy the `.env.example` file to `.env` and fill in the necessary environment variables.
+
+4. Run the bot:
+   ```sh
+   poetry run python main.py
+   ```
 
 ## Usage
-The bot will automatically check for updates at regular intervals and send notifications if new chapters are available.
+
+Interact with the bot on Telegram using the following commands:
+
+- `/start`: Register to begin receiving updates.
+- `/check_updates`: Get updates for last 24 hours.
+- `/list_bookmarks`: Display your bookmarks.
+
+## Configuration
+
+This project is configured using environment variables. Ensure the following are set:
+
+- `TELEGRAM_TOKEN`: Your unique Telegram bot token.
 
 ## Contributing
-Contributions to the Manhwa Update Notifier Bot are welcome! Please feel free to fork the repository, make changes, and submit a pull request.
+
+Contributions to the Manga Notification Bot are welcome! To contribute:
+
+1. Fork the repository.
+2. Create a new feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Create a new Pull Request.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## Contact
+
+If you have any questions or suggestions, please reach out to Dmytro Filin at dmitriy.fillin@gmail.com.
+
+## Acknowledgments
+
+- Thanks to the creators and contributors of the `python-telegram-bot` and `selenium` libraries that made this project possible.
