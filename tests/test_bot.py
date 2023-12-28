@@ -4,6 +4,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
+import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.bot import (
     start,
@@ -13,10 +14,13 @@ from src.bot import (
     send_paginated_bookmarks,
     button,
     run_bot,
+    error,
 )
 from src.utils import format_update_message
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
+from telegram import Update
+from telegram.ext import CallbackContext
 
 
 load_dotenv()
@@ -338,3 +342,20 @@ def test_run_bot(
 
     # Verify that the schedule thread is started
     mock_run_schedule.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_error_handler():
+    with patch("src.bot.logger.warning") as mock_logger_warning:
+        # Create mock instances for Update and CallbackContext
+        mock_update = AsyncMock(spec=Update)
+        mock_context = AsyncMock(spec=CallbackContext)
+        mock_context.error = Exception("Test error")
+
+        # Call the error handler
+        await error(mock_update, mock_context)
+
+        # Assert that logger.warning was called with the correct arguments
+        mock_logger_warning.assert_called_once_with(
+            'Update "%s" caused error "%s"', mock_update, mock_context.error
+        )

@@ -4,6 +4,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
+import unittest
 from unittest.mock import patch, MagicMock
 from src.scrapping import (
     setup_driver,
@@ -11,7 +12,7 @@ from src.scrapping import (
     scrape_bookmarks,
 )  # Replace with your actual import
 from selenium.webdriver.common.by import By
-
+from selenium.common.exceptions import NoSuchElementException
 
 @patch("src.scrapping.webdriver.Chrome")
 @patch("src.scrapping.ChromeDriverManager")
@@ -115,55 +116,60 @@ def mock_driver():
 
     return mock
 
+class TestScrapeBookmarks(unittest.TestCase):
+    @patch("src.scrapping.logger")
+    @patch("src.scrapping.time.sleep", return_value=None)  # Mock sleep to bypass time delay
+    def test_scrape_bookmarks(self, mock_sleep, mock_logger):
+        # Mock the webdriver and the elements it will find
+        mock_driver = MagicMock()
+        mock_bookmark_element = MagicMock()
 
-@patch("src.scrapping.logger")
-def test_scrape_bookmarks(mock_logger, mock_driver):
-    # Mock elements that will be found by the driver
-    mock_bookmark_element = MagicMock()
-    mock_bookmark_element.find_element().get_attribute.side_effect = [
-        "http://example.com/manga1",  # link
-        "http://example.com/img1",  # image
-    ]
-    mock_bookmark_element.find_element().text.side_effect = [
-        "Title 1",  # title
-        "Chapter 1",  # chapter_title
-        "1 hour ago",  # last_update (first call succeeds)
-        "Title 2",  # title
-        "Chapter 2",  # chapter_title
-        Exception("Element not found"),  # last_update (second call raises an exception)
-    ]
-    # Return the mock elements in a list as find_elements would
-    mock_driver.find_elements_by_class_name.return_value = [
-        mock_bookmark_element,
-        mock_bookmark_element,
-    ]
+        # Set up the side effects for the happy path
+        mock_bookmark_element.find_element.side_effect = [
+            MagicMock(get_attribute=MagicMock(return_value="http://example.com/manga")),
+            MagicMock(get_attribute=MagicMock(return_value="http://example.com/image.jpg")),
+            MagicMock(text="Manga Title"),
+            MagicMock(text="Chapter 123"),
+            MagicMock(text="1 hour ago"),  # This will be returned for last_update in the first iteration
+        ]
 
-    # Call the scrape_bookmarks function
-    bookmarks = scrape_bookmarks(mock_driver)
+        # Set up the side effects for when the last_update is not found
+        mock_bookmark_element_missing_last_update = MagicMock()
+        mock_bookmark_element_missing_last_update.find_element.side_effect = [
+            MagicMock(get_attribute=MagicMock(return_value="http://example.com/manga2")),
+            MagicMock(get_attribute=MagicMock(return_value="http://example.com/image2.jpg")),
+            MagicMock(text="Manga Title 2"),
+            MagicMock(text="Chapter 456"),
+            NoSuchElementException("No such element")  # Simulate an element not found exception for last_update
+        ]
 
-    # Verify the driver navigated to the bookmarks page
-    mock_driver.get.assert_called_once_with("https://manga-scans.com/bookmarks/")
+        # Simulate an exception during processing of a bookmark
+        mock_bookmark_element_error = MagicMock()
+        mock_bookmark_element_error.find_element.side_effect = Exception("Unexpected error")
 
-    # Verify that two bookmarks were scraped
-    assert len(bookmarks) == 2
+        # Return the mock elements in a list as find_elements would
+        mock_driver.find_elements.return_value = [
+            mock_bookmark_element,
+            mock_bookmark_element_missing_last_update,
+            mock_bookmark_element_error  # This will cause an error during processing
+        ]
 
-    # Check the contents of the first bookmark (where last_update is found)
-    assert bookmarks[0]["title"] == "Title 1"
-    assert bookmarks[0]["link"] == "http://example.com/manga1"
-    assert bookmarks[0]["chapter_title"] == "Chapter 1"
-    assert bookmarks[0]["last_update"] == "1 hour ago"
-    assert bookmarks[0]["image"] == "http://example.com/img1"
+        # Call the function to be tested
+        result = scrape_bookmarks(mock_driver)
 
-    # Check the contents of the second bookmark (where last_update throws an exception)
-    assert bookmarks[1]["title"] == "Title 2"
-    assert bookmarks[1]["link"] == "http://example.com/manga2"
-    assert bookmarks[1]["chapter_title"] == "Chapter 2"
-    assert (
-        bookmarks[1]["last_update"] == "many time ago"
-    )  # This should be set by the exception block
-    assert bookmarks[1]["image"] == "http://example.com/img2"
+        # Assertions for the happy path
+        self.assertEqual(result[0]["title"], "Manga Title")
+        self.assertEqual(result[0]["link"], "http://example.com/manga")
+        self.assertEqual(result[0]["chapter_title"], "Chapter 123")
+        self.assertEqual(result[0]["last_update"], "1 hour ago")
+        self.assertEqual(result[0]["image"], "http://example.com/image.jpg")
 
-    # Verify that the logger was called for the missing last_update
-    mock_logger.error.assert_called_with(
-        "Error processing a bookmark: Element not found"
-    )
+        # Assertions for the missing last_update scenario
+        self.assertEqual(result[1]["title"], "Manga Title 2")
+        self.assertEqual(result[1]["link"], "http://example.com/manga2")
+        self.assertEqual(result[1]["chapter_title"], "Chapter 456")
+        self.assertEqual(result[1]["last_update"], "many time ago")  # Fallback text
+        self.assertEqual(result[1]["image"], "http://example.com/image2.jpg")
+
+        # Now there should be a call to logger.error due to the processing error
+        mock_logger.error.assert_called_once_with("Error processing a bookmark: Unexpected error")
