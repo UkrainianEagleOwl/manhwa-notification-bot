@@ -4,6 +4,10 @@ FROM python:3.10
 # Set the environment variable for the application home
 ENV APP_HOME /app
 
+
+# Expose port 5666 for the application
+EXPOSE 5666
+
 # Set the working directory inside the container
 WORKDIR $APP_HOME
 
