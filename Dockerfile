@@ -5,8 +5,8 @@ FROM python:3.10
 ENV APP_HOME /app
 
 
-# Expose port 5666 for the application
-EXPOSE 5666
+# Expose port 8000 for the application
+EXPOSE 8000
 
 # Set the working directory inside the container
 WORKDIR $APP_HOME

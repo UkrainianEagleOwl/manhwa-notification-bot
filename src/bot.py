@@ -1,6 +1,7 @@
 import logging
 import os
 import threading
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from telegram.ext import (
     Application,
@@ -22,12 +23,22 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+app = Flask(__name__)
 
 username = os.getenv("WORK_USER_LOGIN")
 password = os.getenv("WORK_USER_PASSWORD")
 
 # Global variable to store the bot's context
 bot_context = None
+
+
+@app.route("/health")
+def health_check():
+    return "OK", 200
+
+
+def runFlask():
+    app.run(host="0.0.0.0", port=8000, debug=False)
 
 
 # Define the asynchronous start command handler
@@ -256,4 +267,3 @@ def run_bot() -> None:
     # Schedule thread for scheduled tasks
     schedule_thread = threading.Thread(target=run_schedule)
     schedule_thread.start()
-
