@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -15,8 +16,8 @@ def setup_driver():
     """
     The setup_driver function initializes a new browser session with ChromeDriverManager.
     It also sets up the ChromeDriver options to run in headless mode, if you don't need a browser UI.
-    
-    
+
+
     :return: A chromedriver instance
     :doc-author: Trelent
     """
@@ -38,7 +39,7 @@ def setup_driver():
 def login(driver, username, password):
     """
     The login function logs into the Manga Scans website.
-    
+
     :param driver: Pass in the webdriver object
     :param username: Pass the username to the login function
     :param password: Pass the password to the login function
@@ -48,13 +49,17 @@ def login(driver, username, password):
     # Open the login page
     driver.get("https://manga-scans.com/login")
 
-    # Wait for the login elements to load
-    time.sleep(2)
+    # Initialize WebDriverWait
+    wait = WebDriverWait(driver, 10)
 
-    # Locate the username and password fields and the login button
-    username_field = driver.find_element(By.ID, "user_login")
-    password_field = driver.find_element(By.ID, "user_pass")
-    login_button = driver.find_element(By.ID, "wp-submit")
+    # Wait for the username field to be present and visible
+    username_field = wait.until(EC.visibility_of_element_located((By.ID, "user_login")))
+
+    # Wait for the password field to be present and visible
+    password_field = wait.until(EC.visibility_of_element_located((By.ID, "user_pass")))
+
+    # Wait for the login button to be present and clickable
+    login_button = wait.until(EC.element_to_be_clickable((By.ID, "wp-submit")))
 
     # Enter the login credentials
     username_field.send_keys(username)
@@ -63,14 +68,11 @@ def login(driver, username, password):
     # Click the login button
     login_button.click()
 
-    # Wait for the login to complete and page to load
-    time.sleep(2)
-
 
 def scrape_bookmarks(driver):
     """
     The scrape_bookmarks function scrapes the bookmarks page of manga-scans.com and returns a list of dictionaries containing information about each bookmark.
-    
+
     :param driver: Pass the webdriver object to the function
     :return: A list of dictionaries
     :doc-author: Trelent
