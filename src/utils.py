@@ -1,11 +1,11 @@
-from src.scrapping import setup_driver, login, scrape_bookmarks
+from src.scrapping import setup_driver, login, scrape_bookmarks,logging
 
 
 async def format_bookmarks_page(bookmarks, page, page_size):
     """
     The format_bookmarks_page function takes a list of bookmarks, the page number to display, and the page size.
     It returns a formatted message containing all of the bookmarks on that page.
-    
+
     :param bookmarks: Pass the list of bookmarks to the function
     :param page: Determine which page of bookmarks to display
     :param page_size: Determine how many bookmarks to show per page
@@ -42,7 +42,7 @@ def format_update_message(update):
     return message
 
 
-def check_for_updates(username,password):
+def check_for_updates(username, password):
     """
     The check_for_updates function checks for updates to the bookmarks on your account.
     It returns a list of dictionaries, each dictionary containing information about a bookmark that has been updated recently.
@@ -54,6 +54,7 @@ def check_for_updates(username,password):
     driver = setup_driver()
     login(driver, username, password)
     bookmarks_data = scrape_bookmarks(driver)
+    logging.info("Got all bookmarks.")
     driver.quit()
 
     recent_updates = []

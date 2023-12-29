@@ -100,6 +100,7 @@ async def list_bookmarks_command(update: Update, context: CallbackContext) -> No
     driver = setup_driver()  # Function to set up the Selenium driver
     login(driver, username, password)
     bookmarks = scrape_bookmarks(driver)
+    logging.info("Got all bookmarks.")
     driver.quit()
 
     # You should save the bookmarks to the user_data to be used in pagination

@@ -44,7 +44,8 @@ RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.d
 RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
 
 # Install any needed packages specified in requirements.txt
-RUN pip install -r requirements.txt
+COPY requirements.txt /app/
+RUN pip install -r /app/requirements.txt
 
 # Run app.py when the container launches
 ENTRYPOINT ["python", "app.py"]

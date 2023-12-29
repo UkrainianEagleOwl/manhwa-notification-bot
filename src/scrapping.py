@@ -7,7 +7,11 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import logging
+import requests
 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +40,15 @@ def setup_driver():
     return driver
 
 
+def check_connectivity(url):
+    try:
+        response = requests.get(url, timeout=15)
+        return response.status_code == 200
+    except requests.RequestException as e:
+        print(f"Connectivity check failed: {e}")
+        return False
+
+
 def login(driver, username, password):
     """
     The login function logs into the Manga Scans website.
@@ -46,27 +59,43 @@ def login(driver, username, password):
     :return: The driver object
     :doc-author: Trelent
     """
+
+    if check_connectivity("https://manga-scans.com/login"):
+        logging.info("Connectivity check passed. Proceeding with Selenium WebDriver.")
+    else:
+        logging.error("Connectivity check failed. Cannot reach the login page.")
     # Open the login page
     driver.get("https://manga-scans.com/login")
 
     # Initialize WebDriverWait
-    wait = WebDriverWait(driver, 10)
-
+    wait = WebDriverWait(driver, 60)
+    logging.info("Selenium WebDriver try reach the login page.")
     # Wait for the username field to be present and visible
-    username_field = wait.until(EC.visibility_of_element_located((By.ID, "user_login")))
+    username_field = wait.until(
+        EC.visibility_of_element_located((By.ID, "user_login")),
+        message="Can not find username field",
+    )
+    logging.info("Got username field.")
 
     # Wait for the password field to be present and visible
-    password_field = wait.until(EC.visibility_of_element_located((By.ID, "user_pass")))
-
+    password_field = wait.until(
+        EC.visibility_of_element_located((By.ID, "user_pass")),
+        message="Can not find password field",
+    )
+    logging.info("Got password field.")
     # Wait for the login button to be present and clickable
-    login_button = wait.until(EC.element_to_be_clickable((By.ID, "wp-submit")))
-
+    login_button = wait.until(
+        EC.element_to_be_clickable((By.ID, "wp-submit")),
+        message="Can not find login button",
+    )
+    logging.info("Got login button.")
     # Enter the login credentials
     username_field.send_keys(username)
     password_field.send_keys(password)
 
     # Click the login button
     login_button.click()
+    logging.info("Login succesfully.")
 
 
 def scrape_bookmarks(driver):
@@ -80,6 +109,7 @@ def scrape_bookmarks(driver):
     driver.get("https://manga-scans.com/bookmarks/")
     time.sleep(2)
     bookmarks = driver.find_elements(By.CLASS_NAME, "unit")
+    logging.info("Bookmarks elements are here.")
 
     bookmarks_data = []
     for bookmark in bookmarks:
@@ -104,6 +134,7 @@ def scrape_bookmarks(driver):
                     "image": image,
                 }
             )
+            logging.info("Got another one bookmark.")
         except Exception as e:
             logger.error(f"Error processing a bookmark: {e}")
 
