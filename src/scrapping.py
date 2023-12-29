@@ -61,9 +61,22 @@ def login(driver, username, password):
     """
 
     if check_connectivity("https://manga-scans.com/login"):
-        logging.info("Connectivity check passed. Proceeding with Selenium WebDriver.")
+        logging.info(
+            "Connectivity check to manga website passed. Proceeding with Selenium WebDriver."
+        )
     else:
-        logging.error("Connectivity check failed. Cannot reach the login page.")
+        logging.error(
+            "Connectivity check to manga website failed. Cannot reach the login page."
+        )
+
+    if check_connectivity("https://www.google.com"):
+        logging.info(
+            "Connectivity check to google passed. Proceeding with Selenium WebDriver."
+        )
+    else:
+        logging.error(
+            "Connectivity check to google failed. Cannot reach the login page."
+        )
     # Open the login page
     driver.get("https://manga-scans.com/login")
 
