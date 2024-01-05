@@ -1,0 +1,16 @@
+Okay, here we are my friend. Frist of all i have some project manga notification bot, under code name :"notti bot" :)
+For now a realize some part, deploy and it works, and i want to upgrade it with some functions. But first, i think my project need restructure.
+You as my python specialist buddy will be my teammate in this deal.
+
+For now what we have in project:
+1) Flask server that is here for deployment, because deployment want to check health of project in server. For now it is all this server do
+2) Scrapping from website. It works, but take a lot of time and we scrapp infromation every time user call the command for bot, it is not perfomance healthy
+3) telegram bot that answer on commands from user and is like the heart of project.
+
+Okay, what i want to do and to change:
+1) Flask server become the heart of project, as i see bot send in log information with code 200 that bot works healthy, we need also listen this information in healthy check 
+in flask and give back if something wrong, so now server will run bot and check health of this bot.
+2) The second we will add data base, i think about elephant as i know this in online variant of PostgreSQL. Our Flask server will control and run database too.
+3) Every 6 hours server will go in database, get every user we have in it and scrap information from manga website (link to website, login and password we will save in database too.) 
+and get update information about bookmarks. 
+4) Telegram bot will work with commands with database, not with scrapping on his own. 
