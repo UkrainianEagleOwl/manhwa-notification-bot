@@ -1,52 +1,9 @@
-from selenium import webdriver
+import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-import time
-import logging
-import requests
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-logger = logging.getLogger(__name__)
-
-
-def setup_driver():
-    """
-    The setup_driver function initializes a new browser session with ChromeDriverManager.
-    It also sets up the ChromeDriver options to run in headless mode, if you don't need a browser UI.
-
-
-    :return: A chromedriver instance
-    :doc-author: Trelent
-    """
-    # Set up the ChromeDriver options
-    options = Options()
-    options.add_argument(
-        "--headless"
-    )  # Run in headless mode, if you don't need a browser UI
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-
-    # Initialize a new browser session with ChromeDriverManager
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
-    )
-    return driver
-
-
-def check_connectivity(url):
-    try:
-        response = requests.get(url, timeout=15)
-        return response.status_code == 200
-    except requests.RequestException as e:
-        print(f"Connectivity check failed: {e}")
-        return False
+from src.utils.log import logging, logger
+from src.scraper.main_scraper import check_connectivity,setup_driver
 
 
 def login(driver, username, password):
@@ -64,19 +21,10 @@ def login(driver, username, password):
         logging.info(
             "Connectivity check to manga website passed. Proceeding with Selenium WebDriver."
         )
-    else:
-        logging.error(
-            "Connectivity check to manga website failed. Cannot reach the login page."
-        )
-
-    if check_connectivity("https://www.google.com"):
-        logging.info(
-            "Connectivity check to google passed. Proceeding with Selenium WebDriver."
-        )
-    else:
-        logging.error(
-            "Connectivity check to google failed. Cannot reach the login page."
-        )
+    # if check_connectivity("https://www.google.com"):
+    #     logging.info(
+    #         "Connectivity check to google passed. Proceeding with Selenium WebDriver."
+    #     )
     # Open the login page
     driver.get("https://manga-scans.com/login")
 
@@ -152,3 +100,27 @@ def scrape_bookmarks(driver):
             logger.error(f"Error processing a bookmark: {e}")
 
     return bookmarks_data
+
+
+def check_for_updates(username, password):
+    """
+    The check_for_updates function checks for updates to the bookmarks on your account.
+    It returns a list of dictionaries, each dictionary containing information about a bookmark that has been updated recently.
+    The keys in each dictionary are: 'title', 'url', and 'last_update'.
+
+
+    :return: A list of dictionaries
+    """
+    driver = setup_driver()
+    login(driver, username, password)
+    bookmarks_data = scrape_bookmarks(driver)
+    logging.info("Got all bookmarks.")
+    driver.quit()
+
+    recent_updates = []
+    for bookmark in bookmarks_data:
+        # Check if 'last_update' indicates a recent update (within hours or minutes)
+        if "hour" in bookmark["last_update"] or "min" in bookmark["last_update"]:
+            recent_updates.append(bookmark)
+
+    return recent_updates

@@ -1,4 +1,4 @@
-from src.scrapping import setup_driver, login, scrape_bookmarks,logging
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 async def format_bookmarks_page(bookmarks, page, page_size):
@@ -42,25 +42,39 @@ def format_update_message(update):
     return message
 
 
-def check_for_updates(username, password):
+def create_pagination_buttons(current_page, total_pages):
     """
-    The check_for_updates function checks for updates to the bookmarks on your account.
-    It returns a list of dictionaries, each dictionary containing information about a bookmark that has been updated recently.
-    The keys in each dictionary are: 'title', 'url', and 'last_update'.
+    The create_pagination_buttons function creates a list of InlineKeyboardButtons
+    for pagination. It takes two arguments: current_page and total_pages.
+    current_page is the page number that the user is currently viewing, while total_pages
+    is the maximum number of pages available for pagination (i.e., if there are 100 items,
+    and each page can display 10 items at most, then there will be 10 pages). The function
+    returns an InlineKeyboardMarkup object containing a list of buttons to be displayed in
+    the Telegram chat window.
 
-
-    :return: A list of dictionaries
+    :param current_page: Determine which page we are on
+    :param total_pages: Know how many pages there are in total
+    :return: An inlinekeyboardmarkup object
     """
-    driver = setup_driver()
-    login(driver, username, password)
-    bookmarks_data = scrape_bookmarks(driver)
-    logging.info("Got all bookmarks.")
-    driver.quit()
-
-    recent_updates = []
-    for bookmark in bookmarks_data:
-        # Check if 'last_update' indicates a recent update (within hours or minutes)
-        if "hour" in bookmark["last_update"] or "min" in bookmark["last_update"]:
-            recent_updates.append(bookmark)
-
-    return recent_updates
+    button_list = []
+    if total_pages == 0:
+        return InlineKeyboardMarkup([])
+    # 'Previous' button if not on the first page
+    if current_page > 0:
+        button_list.append(
+            InlineKeyboardButton(
+                "⬅️ Previous", callback_data=f"prev_{current_page - 1}"
+            )
+        )
+    # Current page button (disabled)
+    button_list.append(
+        InlineKeyboardButton(
+            f"Page {current_page + 1} of {total_pages}", callback_data="noop"
+        )
+    )
+    # 'Next' button if not on the last page
+    if current_page < total_pages - 1:
+        button_list.append(
+            InlineKeyboardButton("Next ➡️", callback_data=f"next_{current_page + 1}")
+        )
+    return InlineKeyboardMarkup([button_list])
