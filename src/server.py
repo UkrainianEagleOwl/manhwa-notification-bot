@@ -14,6 +14,7 @@ from src.scraper.main_scraper import driver
 import src.scraper.manga_scans_scraper as ms_scraper
 from datetime import datetime
 import atexit
+from src.utils.log import logging
 
 
 app = Flask(__name__)
@@ -49,7 +50,15 @@ def update_bookmarks_for_all_users():
     db_session = next(get_db())
     try:
         users_with_websites = get_all_active_users_with_websites(db_session)
+        if not users_with_websites:
+            logging.info("No active users with associated websites found.")
+            return
         for user in users_with_websites:
+            if not user.websites:
+                logging.info(
+                    f"User {user.chat_id} has no associated websites to scrape."
+                )
+                continue
             for user_website in user.websites:
                 # Ensure you have a scraper function that can handle the website details
                 if user_website.website == 1:
@@ -76,7 +85,7 @@ def runFlask():
     )
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
-    
+
     # Start the bot in a separate thread so that it doesn't block the Flask server
     bot_thread = Thread(target=run_bot)
     bot_thread.start()
