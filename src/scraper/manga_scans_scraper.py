@@ -3,7 +3,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from src.utils.log import logging, logger
-from src.scraper.main_scraper import check_connectivity,setup_driver
+from src.scraper.main_scraper import check_connectivity, setup_driver
+from .srcaper_utils import parse_relative_time
 
 
 def login(driver, username, password):
@@ -60,46 +61,56 @@ def login(driver, username, password):
 
 
 def scrape_bookmarks(driver):
-    """
-    The scrape_bookmarks function scrapes the bookmarks page of manga-scans.com and returns a list of dictionaries containing information about each bookmark.
-
-    :param driver: Pass the webdriver object to the function
-    :return: A list of dictionaries
-    :doc-author: Trelent
-    """
     driver.get("https://manga-scans.com/bookmarks/")
-    time.sleep(2)
-    bookmarks = driver.find_elements(By.CLASS_NAME, "unit")
-    logging.info("Bookmarks elements are here.")
+    wait = WebDriverWait(driver, 10)
+    logging.info("Navigated to the bookmarks page.")
 
-    bookmarks_data = []
-    for bookmark in bookmarks:
-        try:
-            link = bookmark.find_element(By.CLASS_NAME, "poster").get_attribute("href")
-            image = bookmark.find_element(By.CSS_SELECTOR, ".poster img").get_attribute(
-                "src"
-            )
-            title = bookmark.find_element(By.CSS_SELECTOR, ".info a").text
-            chapter_title = bookmark.find_element(By.CLASS_NAME, "richdata").text
-            try:
-                last_update = bookmark.find_element(By.CLASS_NAME, "dropdown").text
-            except:
-                last_update = "many time ago"
+    try:
+        bookmarks_elements = wait.until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "unit")),
+            message="Bookmarks elements did not load.",
+        )
+        logging.info(f"Found {len(bookmarks_elements)} bookmarks.")
+
+        bookmarks_data = []
+        for bookmark_element in bookmarks_elements:
+            # Using CSS selectors to navigate the HTML structure
+            link_on_title = bookmark_element.find_element(
+                By.CSS_SELECTOR, ".info > a"
+            ).get_attribute("href")
+            image = bookmark_element.find_element(
+                By.CSS_SELECTOR, ".poster img"
+            ).get_attribute("src")
+            title = bookmark_element.find_element(By.CSS_SELECTOR, ".info > a").text
+            link_on_last_chapter = bookmark_element.find_element(
+                By.CSS_SELECTOR, ".richdata"
+            ).get_attribute("href")
+            last_chapter_title = bookmark_element.find_element(
+                By.CSS_SELECTOR, ".richdata"
+            ).text
+            last_update = bookmark_element.find_element(
+                By.CSS_SELECTOR, ".dropdown"
+            ).text
+
+            # Parsing the last update time
+            parsed_time = parse_relative_time(last_update) if last_update else None
 
             bookmarks_data.append(
                 {
                     "title": title,
-                    "link": link,
-                    "chapter_title": chapter_title,
-                    "last_update": last_update,
+                    "link_on_title": link_on_title,
                     "image": image,
+                    "last_chapter_title": last_chapter_title,
+                    "link_on_last_chapter": link_on_last_chapter,
+                    "time_of_last_update": parsed_time,  # This will be a datetime object or None
                 }
             )
-            logging.info("Got another one bookmark.")
-        except Exception as e:
-            logger.error(f"Error processing a bookmark: {e}")
+            logging.info(f"Processed bookmark: {title}")
 
-    return bookmarks_data
+        return bookmarks_data
+    except Exception as e:
+        logging.error(f"Error while scraping bookmarks: {e}")
+        return []
 
 
 def check_for_updates(username, password):
