@@ -3,12 +3,26 @@ from src.utils.log import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from telegram.ext import CallbackContext
 from src.scraper.main_scraper import setup_driver
-from src.scraper.manga_scans_scraper import login, scrape_bookmarks, check_for_updates
+import src.scraper.manga_scans_scraper as ms_scraper
 from src.bot.format_utils import (
     format_bookmarks_page,
     format_update_message,
     create_pagination_buttons,
 )
+from src.db.db import get_db
+from src.db.repository import get_user_websites, add_or_update_bookmarks
+
+
+def manual_update(chat_id):
+    with get_db() as db:
+        user_websites = get_user_websites(db, chat_id)
+        for user_website in user_websites:
+            # You'll need to implement a function that prepares the scraper based on the website details
+            if user_website.website_id == 1:
+                bookmarks_data = ms_scraper.scrape_bookmarks(user_website.website)
+                add_or_update_bookmarks(
+                    db, chat_id, user_website.website_id, bookmarks_data
+                )
 
 
 # Define the asynchronous start command handler
@@ -36,6 +50,11 @@ async def start(update, context):
     await update.message.reply_text(greeting_message, reply_markup=reply_markup)
 
 
+async def update_now_command(update, context, chat_id):
+    manual_update(chat_id)
+    await update.message.reply_text("Bookmarkes updated")
+
+
 async def check_updates_command(update: Update, context: CallbackContext) -> None:
     """
     The check_updates_command function is a callback function that will be called when the user clicks on the &quot;Check for Updates&quot; button.
@@ -47,7 +66,7 @@ async def check_updates_command(update: Update, context: CallbackContext) -> Non
     :doc-author: Trelent
     """
     query = update.callback_query
-    recent_updates = check_for_updates(
+    recent_updates = ms_scraper.check_for_updates(
         os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
     )
 
@@ -87,8 +106,10 @@ async def list_and_send_bookmarks_command(
 
     query = update.callback_query
     driver = setup_driver()
-    login(driver, os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD"))
-    bookmarks = scrape_bookmarks(driver)
+    ms_scraper.login(
+        driver, os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
+    )
+    bookmarks = ms_scraper.scrape_bookmarks(driver)
     logging.info("Got all bookmarks.")
     driver.quit()
 

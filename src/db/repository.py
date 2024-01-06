@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from .models import User, UserWebsite, Bookmark
+from .models import User, UserWebsite, Bookmark,Website
 from src.utils.log import logging
 from cryptography.fernet import Fernet
 import os
@@ -27,6 +27,22 @@ def create_user(db: Session, chat_id: int, notification_time: str, is_active: bo
         db.rollback()
         logging.error(f"Can't create user for chat_id {chat_id}: {str(e)}")
         return None
+
+
+def get_all_active_users_with_websites(db: Session):
+    try:
+        # Retrieve all active users and their associated websites
+        active_users_with_websites = (
+            db.query(User)
+            .join(UserWebsite, User.chat_id == UserWebsite.chat_id)
+            .join(Website, UserWebsite.website_id == Website.website_id)
+            .filter(User.is_active == True)
+            .all()
+        )
+        return active_users_with_websites
+    except SQLAlchemyError as e:
+        logging.error(f"Error retrieving active users with websites: {str(e)}")
+        return []
 
 
 def update_notification_time(db: Session, chat_id: int, new_notification_time: str):

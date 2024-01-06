@@ -60,7 +60,7 @@ def login(driver, username, password):
     logging.info("Login succesfully.")
 
 
-def scrape_bookmarks(driver):
+def  scrape_bookmarks(driver):
     driver.get("https://manga-scans.com/bookmarks/")
     wait = WebDriverWait(driver, 10)
     logging.info("Navigated to the bookmarks page.")
