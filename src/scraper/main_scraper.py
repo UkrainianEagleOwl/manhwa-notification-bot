@@ -5,6 +5,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from src.utils.log import logging
 import requests
 import src.scraper.manga_scans_scraper as ms_scraper
+from src.db.constant_manga_websites import AVAILABLE_WEBSITES
 
 
 def setup_driver():

@@ -13,6 +13,8 @@ from src.bot.handler import (
     check_updates_command,
     start,
 )
+
+
 bot_context = None
 
 

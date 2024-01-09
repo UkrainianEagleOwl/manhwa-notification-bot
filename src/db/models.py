@@ -34,6 +34,7 @@ class Website(Base):
     __tablename__ = "websites"
 
     website_id = Column(Integer, primary_key=True)
+    website_name = Column(String, unique=True)
     website_link = Column(String, unique=True)
 
     # Relationship to UserWebsite

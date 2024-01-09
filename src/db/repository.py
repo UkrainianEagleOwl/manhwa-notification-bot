@@ -1,10 +1,11 @@
+import os
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from .models import User, UserWebsite, Bookmark,Website
+from .models import User, UserWebsite, Bookmark, Website
 from src.utils.log import logging
 from cryptography.fernet import Fernet
-import os
 from datetime import datetime, timedelta
+from src.db.constant_manga_websites import AVAILABLE_WEBSITES
 
 
 # Fernet key should be kept secret and loaded from an environment variable or secure storage
@@ -43,6 +44,24 @@ def get_all_active_users_with_websites(db: Session):
     except SQLAlchemyError as e:
         logging.error(f"Error retrieving active users with websites: {str(e)}")
         return []
+
+
+def get_active_user_with_websites(db: Session, chat_id: int):
+    try:
+        # Retrieve the active user and their associated websites by chat_id
+        active_user_with_websites = (
+            db.query(User)
+            .join(UserWebsite, User.chat_id == UserWebsite.chat_id)
+            .join(Website, UserWebsite.website_id == Website.website_id)
+            .filter(User.is_active == True, User.chat_id == chat_id)
+            .first()
+        )
+        return active_user_with_websites
+    except SQLAlchemyError as e:
+        logging.error(
+            f"Error retrieving active user with websites for chat_id {chat_id}: {str(e)}"
+        )
+        return None
 
 
 def update_notification_time(db: Session, chat_id: int, new_notification_time: str):
@@ -258,4 +277,23 @@ def add_or_update_bookmarks(
     except SQLAlchemyError as e:
         db.rollback()
         logging.error(f"Error updating bookmarks for chat_id {chat_id}: {str(e)}")
+        return False
+
+
+# Synchronization script to run at application startup
+def synchronize_websites(db_session):
+    try:
+        for site in AVAILABLE_WEBSITES:
+            existing_site = db_session.query(Website).filter_by(name=site["name"]).first()
+            if not existing_site:
+                # Site not in database, add it
+                new_site = Website(name=site["name"], url=site["url"])
+                db_session.add(new_site)
+            else:
+                existing_site.url = site["url"]
+            db_session.commit()
+            return True
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        logging.error(f"Error synchronizing websites: {str(e)}")
         return False

@@ -9,16 +9,31 @@ from src.bot.format_utils import (
     create_pagination_buttons,
 )
 from src.db.db import get_db
-from src.db.repository import add_or_update_bookmarks
-
+from src.db.repository import (
+    add_or_update_bookmarks,
+    get_user_credentials,
+    get_active_user_with_websites,
+)
 
 def manual_update(chat_id):
     with get_db() as db:
-        user_websites = get_user_websites(db, chat_id)
-        for user_website in user_websites:
+        user_with_websites = get_active_user_with_websites(db, chat_id)
+        if not user_with_websites:
+            logging.error(f"No active websites found for user with chat_id {chat_id}.")
+            return  # Or handle this case as needed
+
+        # If the user has no websites, this list will be empty and the loop will not run
+        for user_website in user_with_websites.websites:
+            decrypted_username, decrypted_password = get_user_credentials(
+                db, chat_id, user_website.website_id
+            )
             # You'll need to implement a function that prepares the scraper based on the website details
-            bookmarks_data = scrape_bookmarks(user_website.website_id,user_website.username,user_website.password)
-            add_or_update_bookmarks(
+            bookmarks_data = scrape_bookmarks(
+                user_website.website_id, decrypted_username, decrypted_password
+            )
+            # Make sure to handle the case where scraping fails and bookmarks_data is not as expected
+            if bookmarks_data:
+                add_or_update_bookmarks(
                     db, chat_id, user_website.website_id, bookmarks_data
                 )
 
@@ -50,67 +65,67 @@ async def start(update, context):
 
 async def update_now_command(update, context, chat_id):
     manual_update(chat_id)
-    await update.message.reply_text("Bookmarkes updated")
+    await update.message.reply_text("All your bookmarks have been updated.")
 
 
-async def check_updates_command(update: Update, context: CallbackContext) -> None:
-    """
-    The check_updates_command function is a callback function that will be called when the user clicks on the &quot;Check for Updates&quot; button.
-    It will check for updates and send them to the user.
+# async def check_updates_command(update: Update, context: CallbackContext) -> None:
+#     """
+#     The check_updates_command function is a callback function that will be called when the user clicks on the &quot;Check for Updates&quot; button.
+#     It will check for updates and send them to the user.
 
-    :param update: Update: Get the update object from the callback query
-    :param context: CallbackContext: Pass the context in which this function is called
-    :return: None, so the bot doesn't know what to do with it
-    :doc-author: Trelent
-    """
-    query = update.callback_query
-    recent_updates = ms_scraper.check_for_updates(
-        os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
-    )
+#     :param update: Update: Get the update object from the callback query
+#     :param context: CallbackContext: Pass the context in which this function is called
+#     :return: None, so the bot doesn't know what to do with it
+#     :doc-author: Trelent
+#     """
+#     query = update.callback_query
+#     recent_updates = ms_scraper.check_for_updates(
+#         os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
+#     )
 
-    # Now use 'query.message' to send a reply
-    for manga_update in recent_updates:
-        message = format_update_message(manga_update)
-        await query.message.reply_photo(
-            photo=manga_update["image"], caption=message, parse_mode="HTML"
-        )
+#     # Now use 'query.message' to send a reply
+#     for manga_update in recent_updates:
+#         message = format_update_message(manga_update)
+#         await query.message.reply_photo(
+#             photo=manga_update["image"], caption=message, parse_mode="HTML"
+#         )
 
 
-async def list_and_send_bookmarks_command(
-    update: Update, context: CallbackContext, page=0, page_size=10
-) -> None:
-    """
-    This function combines the functionalities of listing bookmarks and sending them in a paginated form.
-    It first scrapes the bookmarks, then sends them in a paginated manner.
+# async def list_and_send_bookmarks_command(
+#     update: Update, context: CallbackContext, page=0, page_size=10
+# ) -> None:
+#     """
+#     This function combines the functionalities of listing bookmarks and sending them in a paginated form.
+#     It first scrapes the bookmarks, then sends them in a paginated manner.
 
-    :param update: Update: The update object from the callback context.
-    :param context: CallbackContext: The context of the function.
-    :param page: The current page number for pagination.
-    :param page_size: The number of bookmarks to display per page.
-    """
+#     :param update: Update: The update object from the callback context.
+#     :param context: CallbackContext: The context of the function.
+#     :param page: The current page number for pagination.
+#     :param page_size: The number of bookmarks to display per page.
+#     """
 
-    async def send_paginated_message(message: Message, bookmarks, page, page_size):
-        total_pages = max(
-            1, len(bookmarks) // page_size + (1 if len(bookmarks) % page_size else 0)
-        )
-        formatted_message = await format_bookmarks_page(bookmarks, page, page_size)
-        reply_markup = create_pagination_buttons(page, total_pages)
-        await message.reply_text(
-            formatted_message,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-        )
+#     async def send_paginated_message(message: Message, bookmarks, page, page_size):
+#         total_pages = max(
+#             1, len(bookmarks) // page_size + (1 if len(bookmarks) % page_size else 0)
+#         )
+#         formatted_message = await format_bookmarks_page(bookmarks, page, page_size)
+#         reply_markup = create_pagination_buttons(page, total_pages)
+#         await message.reply_text(
+#             formatted_message,
+#             reply_markup=reply_markup,
+#             parse_mode="HTML",
+#             disable_web_page_preview=True,
+#         )
 
-    query = update.callback_query
-    driver = setup_driver()
-    ms_scraper.login(
-        driver, os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
-    )
-    bookmarks = ms_scraper.scrape_bookmarks(driver)
-    logging.info("Got all bookmarks.")
-    driver.quit()
+#     query = update.callback_query
+#     driver = setup_driver()
+#     ms_scraper.login(
+#         driver, os.getenv("WORK_USER_LOGIN"), os.getenv("WORK_USER_PASSWORD")
+#     )
+#     bookmarks = ms_scraper.scrape_bookmarks(driver)
+#     logging.info("Got all bookmarks.")
+#     driver.quit()
 
-    context.user_data["bookmarks"] = bookmarks
+#     context.user_data["bookmarks"] = bookmarks
 
-    await send_paginated_message(query.message, bookmarks, page, page_size)
+#     await send_paginated_message(query.message, bookmarks, page, page_size)

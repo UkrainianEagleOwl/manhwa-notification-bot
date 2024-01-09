@@ -9,9 +9,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from src.db.repository import (
     get_all_active_users_with_websites,
     add_or_update_bookmarks,
+    get_user_credentials,
+    synchronize_websites,
 )
-from src.scraper.main_scraper import driver
-import src.scraper.manga_scans_scraper as ms_scraper
+from src.scraper.main_scraper import driver, scrape_bookmarks
 from datetime import datetime
 import atexit
 from src.utils.log import logging
@@ -35,20 +36,14 @@ def health_check():
     return health_status, 200 if bot_healthy else 500
 
 
-# Example route using the database session
-@app.route("/example")
-def example():
-    # Get a session
-    db_session = next(get_db())
-    # Perform database operations here...
-    # Close the session
-    db_session.close()
-    return "This is an example route."
+def update_websites_list_actual():
+    with get_db() as db_session:
+        if synchronize_websites(db_session=db_session):
+            logging.info("Sync websites successfully")
 
 
 def update_bookmarks_for_all_users():
-    db_session = next(get_db())
-    try:
+    with get_db() as db_session:
         users_with_websites = get_all_active_users_with_websites(db_session)
         if not users_with_websites:
             logging.info("No active users with associated websites found.")
@@ -60,18 +55,23 @@ def update_bookmarks_for_all_users():
                 )
                 continue
             for user_website in user.websites:
-                # Ensure you have a scraper function that can handle the website details
-                if user_website.website == 1:
-                    bookmarks_data = ms_scraper.scrape_bookmarks(driver)
-                    # Update the bookmarks in the database
-                    add_or_update_bookmarks(
-                        db_session,
-                        user.chat_id,
-                        user_website.website_id,
-                        bookmarks_data,
-                    )
-    finally:
-        db_session.close()
+                # Assuming you have a method to decrypt the credentials
+                decrypted_username, decrypted_password = get_user_credentials(
+                    db_session, user.chat_id, user_website.website_id
+                )
+                # Now scrape bookmarks using the decrypted credentials
+                bookmarks_data = scrape_bookmarks(
+                    user_website.website_id,
+                    decrypted_username,
+                    decrypted_password,
+                )
+                # Ensure that the bookmarks_data is in the correct format for add_or_update_bookmarks
+                add_or_update_bookmarks(
+                    db_session,
+                    user.chat_id,
+                    user_website.website_id,
+                    bookmarks_data,
+                )
 
 
 def runFlask():
@@ -92,5 +92,5 @@ def runFlask():
 
     # Run Flask app in the main thread
     app.run(host="0.0.0.0", port=8000, debug=False)
-
+    update_websites_list_actual()
     # Ensure the scheduler is safely shut down when the app exits
