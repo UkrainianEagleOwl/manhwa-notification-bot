@@ -2,15 +2,14 @@ import os
 from src.utils.log import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from telegram.ext import CallbackContext
-from src.scraper.main_scraper import setup_driver
-import src.scraper.manga_scans_scraper as ms_scraper
+from src.scraper.main_scraper import setup_driver, scrape_bookmarks
 from src.bot.format_utils import (
     format_bookmarks_page,
     format_update_message,
     create_pagination_buttons,
 )
 from src.db.db import get_db
-from src.db.repository import get_user_websites, add_or_update_bookmarks
+from src.db.repository import add_or_update_bookmarks
 
 
 def manual_update(chat_id):
@@ -18,9 +17,8 @@ def manual_update(chat_id):
         user_websites = get_user_websites(db, chat_id)
         for user_website in user_websites:
             # You'll need to implement a function that prepares the scraper based on the website details
-            if user_website.website_id == 1:
-                bookmarks_data = ms_scraper.scrape_bookmarks(user_website.website)
-                add_or_update_bookmarks(
+            bookmarks_data = scrape_bookmarks(user_website.website_id,user_website.username,user_website.password)
+            add_or_update_bookmarks(
                     db, chat_id, user_website.website_id, bookmarks_data
                 )
 
