@@ -282,6 +282,15 @@ def add_or_update_bookmarks(
 
 # Synchronization script to run at application startup
 def synchronize_websites(db_session):
+    """
+    The synchronize_websites function synchronizes the available websites in the database with those defined in AVAILABLE_WEBSITES.
+        If a website is not present in the database, it will be added.
+        If a website is present but has an outdated URL, it will be updated.
+    
+    :param db_session: Access the database
+    :return: True if the database was updated, and false otherwise
+    :doc-author: Trelent
+    """
     try:
         for site in AVAILABLE_WEBSITES:
             existing_site = db_session.query(Website).filter_by(name=site["name"]).first()
