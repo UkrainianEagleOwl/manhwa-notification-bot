@@ -7,7 +7,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     CallbackContext,
 )
-from src.bot.format_utils import format_bookmarks_page, create_pagination_buttons
+from src.bot.buttons import button
 from src.bot.handler import (
     list_and_send_bookmarks_command,
     check_updates_command,
@@ -16,7 +16,6 @@ from src.bot.handler import (
 
 
 bot_context = None
-
 
 async def error(update: Update, context: CallbackContext) -> None:
     """
@@ -30,51 +29,6 @@ async def error(update: Update, context: CallbackContext) -> None:
     :return: None
     """
     logger.warning('Update "%s" caused error "%s"', update, context.error)
-
-
-async def button(update: Update, context: CallbackContext) -> None:
-    """
-    The button function is used to handle the callback queries from the inline keyboard.
-
-    :param update: Update: Get the update object, which contains information about the incoming update
-    :param context: CallbackContext: Pass the context object to the function
-    :return: None
-    """
-    query = update.callback_query
-    await query.answer()
-
-    data = query.data
-
-    # Check if the callback data is for the start menu
-    if data == "get_update":
-        await check_updates_command(update, context)
-    elif data == "get_all_list":
-        await list_and_send_bookmarks_command(
-            query.message, context, context.user_data["bookmarks"], page=0, page_size=10
-        )
-
-    # If the user is navigating the pages, use the stored data.
-    elif data.startswith("prev_") or data.startswith("next_"):
-        # Extract the action and page number from the callback data
-        action, page_str = data.split("_")
-        page = int(page_str)
-        bookmarks = context.user_data.get("bookmarks", [])
-
-        # Pagination logic
-        if action in ["prev", "next"]:
-            # Edit the message to the new page of bookmarks
-            message = await format_bookmarks_page(bookmarks, page, page_size=10)
-            reply_markup = create_pagination_buttons(
-                page,
-                total_pages=len(bookmarks) // 10 + (1 if len(bookmarks) % 10 else 0),
-            )
-            await query.edit_message_text(
-                text=message,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,  # Add this to disable web page previews
-            )
-
 
 def run_bot() -> None:
     """

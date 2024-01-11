@@ -1,7 +1,7 @@
 import os
 from src.utils.log import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler
 from src.scraper.main_scraper import setup_driver, scrape_bookmarks
 from src.bot.format_utils import (
     format_bookmarks_page,
@@ -13,7 +13,19 @@ from src.db.repository import (
     add_or_update_bookmarks,
     get_user_credentials,
     get_active_user_with_websites,
+    get_user_by_chat_id,
+    create_user,
 )
+
+# Define the button callback data
+BUTTON_WEBSITE_CHOICE = "choose_website"
+BUTTON_DISABLE_USER = "disable_user"
+BUTTON_SHOW_BOOKMARKS = "show_bookmarks"
+BUTTON_RECENT_UPDATES = "recent_updates"
+BUTTON_NOTIFICATION_SETTINGS = "notification_settings"
+BUTTON_UPDATE_DATA_BASE = "update_data_base"
+BUTTON_CHOOSE_WEBSITE = "choose_website"
+
 
 def manual_update(chat_id):
     with get_db() as db:
@@ -39,28 +51,73 @@ def manual_update(chat_id):
 
 
 # Define the asynchronous start command handler
-async def start(update, context):
-    """
-    The start function is the first function that gets called when a user interacts with the bot.
-    It sends a greeting message and an inline keyboard to choose from different actions.
+def handle_start_command(update, context):
+    chat_id = update.message.chat_id
+    with get_db() as db:
+        try:
+            user = get_user_by_chat_id(db, chat_id)
+            if user and user.is_active:
+                greeting = "Welcome back! Ready to check out the latest manga?"
+                keyboard = [
+                    [
+                        InlineKeyboardButton(
+                            "Show All Bookmarks", callback_data=BUTTON_SHOW_BOOKMARKS
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Get Recent Updates", callback_data=BUTTON_RECENT_UPDATES
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Notification Settings",
+                            callback_data=BUTTON_NOTIFICATION_SETTINGS,
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Disable User", callback_data=BUTTON_DISABLE_USER
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Update Data", callback_data=BUTTON_UPDATE_DATA_BASE
+                        )
+                    ],
+                ]
+            else:
+                if user is None:
+                    create_user(
+                        db,
+                        chat_id=chat_id,
+                        notification_time=None,
+                        is_active=True,
+                    )
+                    greeting = "Hello! Welcome to Manga Bot. Let's get you started."
+                else:
+                    # If the user exists but is not active, reactivate the user
+                    user.is_active = True
+                    db.commit()
+                    greeting = "Welcome back! Your account is now active again."
 
-    :param update: Get the message sent by the user
-    :param context: Pass the context of the message to this function
-    :return: A conversationhandler object
-    :doc-author: Trelent
-    """
-    # Friendly greeting message
-    greeting_message = "Welcome to MangaMate! 📚✨\nYour personal assistant for staying updated with your favorite Manga. What would you like to do today?"
+                keyboard = [
+                    [
+                        InlineKeyboardButton(
+                            "Choose Website", callback_data=BUTTON_WEBSITE_CHOICE
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "Disable User", callback_data=BUTTON_DISABLE_USER
+                        )
+                    ],
+                ]
 
-    # Keyboard with buttons for different actions
-    keyboard = [
-        [InlineKeyboardButton("Get Latest Update", callback_data="get_update")],
-        [InlineKeyboardButton("Get My Manga List", callback_data="get_all_list")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    # Send the greeting message followed by the keyboard
-    await update.message.reply_text(greeting_message, reply_markup=reply_markup)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            context.bot.send_message(chat_id, text=greeting, reply_markup=reply_markup)
+        except Exception as e:
+            logging.error(f"An error occurred while handling /start command: {e}")
 
 
 async def update_now_command(update, context, chat_id):
