@@ -82,11 +82,11 @@ def update_notification_time(db: Session, chat_id: int, new_notification_time: s
         return False
 
 
-def update_user_website(db: Session, chat_id: int, website_id: int, website_data):
+def update_user_website(db: Session, chat_id: int, website_id: int, login, password):
     try:
         # Encrypt the credentials
-        encrypted_login = cipher_suite.encrypt(website_data["login"].encode())
-        encrypted_password = cipher_suite.encrypt(website_data["password"].encode())
+        encrypted_login = cipher_suite.encrypt(login.encode())
+        encrypted_password = cipher_suite.encrypt(password.encode())
 
         # Find the existing user website association or create a new one
         db_user_website = (
@@ -184,18 +184,18 @@ def get_recent_bookmarks(db: Session, chat_id: int, hours: int = 24):
         return []
 
 
-def set_user_inactive(db: Session, chat_id: int):
+def set_user_status(db: Session, chat_id: int, status: bool):
     try:
         # Find the user by chat ID and set them as inactive
         user = db.query(User).filter(User.chat_id == chat_id).first()
         if user:
-            user.is_active = False
+            user.is_active = status
             db.commit()
             return True
         return False
     except SQLAlchemyError as e:
         db.rollback()
-        logging.error(f"Can't put user inactive for chat_id {chat_id}: {str(e)}")
+        logging.error(f"Can't put user status for chat_id {chat_id}: {str(e)}")
         return False
 
 
@@ -286,14 +286,16 @@ def synchronize_websites(db_session):
     The synchronize_websites function synchronizes the available websites in the database with those defined in AVAILABLE_WEBSITES.
         If a website is not present in the database, it will be added.
         If a website is present but has an outdated URL, it will be updated.
-    
+
     :param db_session: Access the database
     :return: True if the database was updated, and false otherwise
     :doc-author: Trelent
     """
     try:
         for site in AVAILABLE_WEBSITES:
-            existing_site = db_session.query(Website).filter_by(name=site["name"]).first()
+            existing_site = (
+                db_session.query(Website).filter_by(name=site["name"]).first()
+            )
             if not existing_site:
                 # Site not in database, add it
                 new_site = Website(name=site["name"], url=site["url"])

@@ -9,8 +9,6 @@ from telegram.ext import (
 )
 from src.bot.buttons import button
 from src.bot.handler import (
-    list_and_send_bookmarks_command,
-    check_updates_command,
     start,
 )
 
@@ -42,11 +40,6 @@ def run_bot() -> None:
 
     # Command Handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("check_updates", check_updates_command))
-    application.add_handler(
-        CommandHandler("list_bookmarks", list_and_send_bookmarks_command)
-    )
-
     # Callback Query Handler for buttons
     application.add_handler(CallbackQueryHandler(button))
 
