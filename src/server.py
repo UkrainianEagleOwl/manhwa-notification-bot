@@ -7,12 +7,13 @@ from src.db.db import get_db
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from src.db.repository import (
+    update_user_last_update_time,
     get_all_active_users_with_websites,
     add_or_update_bookmarks,
     get_user_credentials,
     synchronize_websites,
 )
-from src.scraper.main_scraper import driver, scrape_bookmarks
+from src.scraper.scrapers_commands import scrape_bookmarks
 from datetime import datetime
 import atexit
 from src.utils.log import logging
@@ -55,7 +56,7 @@ def update_bookmarks_for_all_users():
                 )
                 continue
             for user_website in user.websites:
-                # Assuming you have a method to decrypt the credentials
+                update_user_last_update_time(db_session, user.chat_id)
                 decrypted_username, decrypted_password = get_user_credentials(
                     db_session, user.chat_id, user_website.website_id
                 )

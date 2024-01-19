@@ -9,6 +9,7 @@ from src.bot.format_utils import (
 from src.db.db import get_db
 from src.bot.telegram_db_connector import manual_update
 from src.db.repository import (
+    get_last_update_info_for_user,
     get_user_by_chat_id,
     get_all_user_bookmarks,
     create_user,
@@ -36,8 +37,10 @@ def handle_start_command(update, context):
     with get_db() as db:
         try:
             user = get_user_by_chat_id(db, chat_id)
+            last_time_update_data = get_last_update_info_for_user(db, chat_id)
             if user and user.is_active:
-                greeting = "Welcome back! Ready to check out the latest manga?"
+                greeting = "Welcome back! Ready to check out the latest manga?\n"
+                greeting += last_time_update_data;
                 keyboard = [
                     [
                         InlineKeyboardButton(

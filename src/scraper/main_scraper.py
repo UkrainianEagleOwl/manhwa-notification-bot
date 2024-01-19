@@ -4,8 +4,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from src.utils.log import logging
 import requests
-import src.scraper.manga_scans_scraper as ms_scraper
-from src.db.constant_manga_websites import AVAILABLE_WEBSITES
+
 
 
 def setup_driver():
@@ -41,10 +40,4 @@ def check_connectivity(url):
         return False
 
 
-def scrape_bookmarks(manga_web_site_id, username, password):
-    if manga_web_site_id == 1:
-        driver = setup_driver()
-        ms_scraper.login(driver, username, password)
-        bookmarks_data = ms_scraper.scrape_bookmarks(driver)
-        logging.info("Got all bookmarks.")
-        return bookmarks_data
+

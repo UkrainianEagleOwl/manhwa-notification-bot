@@ -8,6 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -16,12 +17,11 @@ class User(Base):
     __tablename__ = "users"
 
     chat_id = Column(Integer, primary_key=True)
-    notification_time = Column(
-        String, nullable=True
-    )  # Assuming it can be None if the user hasn't set it
+    notification_time = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-
-    # Relationship to UserWebsite with cascade delete
+    last_update = Column(
+        DateTime, default=datetime.utcnow
+    )  # New field for last update time
     websites = relationship(
         "UserWebsite", back_populates="user", cascade="all, delete-orphan"
     )

@@ -1,4 +1,4 @@
-from src.scraper.main_scraper import scrape_bookmarks
+from src.scraper.scrapers_commands import scrape_bookmarks
 from src.db.repository import (
     add_or_update_bookmarks,
     get_user_credentials,

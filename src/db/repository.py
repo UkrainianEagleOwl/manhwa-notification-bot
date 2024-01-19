@@ -6,12 +6,38 @@ from src.utils.log import logging
 from cryptography.fernet import Fernet
 from datetime import datetime, timedelta
 from src.db.constant_manga_websites import AVAILABLE_WEBSITES
+import base64
 
 
 # Fernet key should be kept secret and loaded from an environment variable or secure storage
 fernet_key = os.getenv("FERNET_KEY")
 if fernet_key is None:
     raise ValueError("The FERNET_KEY environment variable is not set.")
+# Debug: Print the key to check its format
+print("Fernet Key from env:", fernet_key)
+# Encode the key to bytes
+print(len(fernet_key))
+if len(fernet_key) % 4:
+    # Key is not padded with the correct number of '='
+    fernet_key += "=" * (4 - len(fernet_key) % 4)
+fernet_key_bytes = fernet_key.encode()
+
+# Debug: Print the encoded bytes
+print("Encoded Fernet Key:", fernet_key_bytes)
+
+try:
+    fernet_key = base64.urlsafe_b64decode(fernet_key)
+except Exception as e:
+    raise ValueError(
+        "Invalid FERNET_KEY: key must be a 32 url-safe base64-encoded bytes."
+    ) from e
+
+# Debug: Print the decoded key length
+print("Decoded Fernet Key length:", len(fernet_key))
+
+# Ensure the decoded key is 32 bytes
+if len(fernet_key) != 32:
+    raise ValueError("Fernet key must be 32 url-safe base64-encoded bytes.")
 cipher_suite = Fernet(fernet_key)
 
 
@@ -277,6 +303,44 @@ def add_or_update_bookmarks(
     except SQLAlchemyError as e:
         db.rollback()
         logging.error(f"Error updating bookmarks for chat_id {chat_id}: {str(e)}")
+        return False
+
+
+def update_user_last_update_time(db: Session, chat_id):
+    try:
+        user = db.query(User).filter_by(chat_id=chat_id).first()
+        if user:
+            user.last_update = datetime.utcnow()
+            db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logging.error(
+            f"Error updating user last time database update for chat_id {chat_id}: {str(e)}"
+        )
+        return False
+
+
+def get_last_update_info_for_user(db: Session, chat_id):
+    try:
+        user = db.query(User).filter_by(chat_id=chat_id).first()
+        if user and user.last_update:
+            time_diff = datetime.utcnow() - user.last_update
+            if time_diff.days > 0:
+                formatted_time_diff = f"Data was updated {time_diff.days} days ago"
+            hours = time_diff.seconds // 3600
+            if hours > 0:
+                formatted_time_diff = f"Data was updated {hours} hours ago"
+            minutes = (time_diff.seconds // 60) % 60
+            if minutes > 0:
+                formatted_time_diff = f"Data was updated {minutes} minutes ago"
+            return formatted_time_diff
+        else:
+            return "Data update is pending"
+    except SQLAlchemyError as e:
+        db.rollback()
+        logging.error(
+            f"Error get user last time database update for chat_id {chat_id}: {str(e)}"
+        )
         return False
 
 
