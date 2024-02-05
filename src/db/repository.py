@@ -6,38 +6,25 @@ from src.utils.log import logging
 from cryptography.fernet import Fernet
 from datetime import datetime, timedelta
 from src.db.constant_manga_websites import AVAILABLE_WEBSITES
-import base64
+from base64 import urlsafe_b64decode
 
 
-# Fernet key should be kept secret and loaded from an environment variable or secure storage
 fernet_key = os.getenv("FERNET_KEY")
 if fernet_key is None:
     raise ValueError("The FERNET_KEY environment variable is not set.")
-# Debug: Print the key to check its format
-print("Fernet Key from env:", fernet_key)
-# Encode the key to bytes
-print(len(fernet_key))
-if len(fernet_key) % 4:
-    # Key is not padded with the correct number of '='
-    fernet_key += "=" * (4 - len(fernet_key) % 4)
-fernet_key_bytes = fernet_key.encode()
 
-# Debug: Print the encoded bytes
-print("Encoded Fernet Key:", fernet_key_bytes)
+# Ensure proper padding
+fernet_key = fernet_key.encode()  # Ensure it's bytes
+padding = 4 - (len(fernet_key) % 4)
+fernet_key += b"=" * padding
 
+# Decode to verify it is correct
 try:
-    fernet_key = base64.urlsafe_b64decode(fernet_key)
+    # This will raise an error if the key is incorrect
+    urlsafe_b64decode(fernet_key)
 except Exception as e:
-    raise ValueError(
-        "Invalid FERNET_KEY: key must be a 32 url-safe base64-encoded bytes."
-    ) from e
+    raise ValueError("Fernet key is not correctly base64 encoded.") from e
 
-# Debug: Print the decoded key length
-print("Decoded Fernet Key length:", len(fernet_key))
-
-# Ensure the decoded key is 32 bytes
-if len(fernet_key) != 32:
-    raise ValueError("Fernet key must be 32 url-safe base64-encoded bytes.")
 cipher_suite = Fernet(fernet_key)
 
 
@@ -358,14 +345,14 @@ def synchronize_websites(db_session):
     try:
         for site in AVAILABLE_WEBSITES:
             existing_site = (
-                db_session.query(Website).filter_by(name=site["name"]).first()
+                db_session.query(Website).filter_by(website_name=site["name"]).first()
             )
             if not existing_site:
                 # Site not in database, add it
-                new_site = Website(name=site["name"], url=site["url"])
+                new_site = Website(website_name=site["name"], website_link=site["url"])
                 db_session.add(new_site)
             else:
-                existing_site.url = site["url"]
+                existing_site.website_link = site["url"]
             db_session.commit()
             return True
     except SQLAlchemyError as e:

@@ -32,13 +32,13 @@ BUTTON_MANGA_WEBSITE_MANGA_SCANS = "manga-scans.com"
 
 
 # Define the asynchronous start command handler
-def handle_start_command(update, context):
+async def handle_start_command(update, context):
     chat_id = update.message.chat_id
     with get_db() as db:
         try:
             user = get_user_by_chat_id(db, chat_id)
             last_time_update_data = get_last_update_info_for_user(db, chat_id)
-            if user and user.is_active:
+            if user and user.is_active and (len(user.websites) > 0):
                 greeting = "Welcome back! Ready to check out the latest manga?\n"
                 greeting += last_time_update_data;
                 keyboard = [
@@ -106,15 +106,21 @@ def handle_start_command(update, context):
                 ]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
-            context.bot.send_message(chat_id, text=greeting, reply_markup=reply_markup)
+            await context.bot.send_message(
+                chat_id, text=greeting, reply_markup=reply_markup
+            )
         except Exception as e:
             logging.error(f"An error occurred while handling /start command: {e}")
 
 
 # Define the asynchronous handle_bookmarks_command handler
-def handle_bookmarks_command(update, context):
+async def handle_bookmarks_command(update, context):
     try:
-        chat_id = update.message.chat_id
+        if update.message:
+            chat_id = update.message.chat_id
+        else:
+            query = update.callback_query
+            chat_id = query.message.chat_id
         message_text = "What you want to do with your bookmarks?"
         keyboard = [
             [
@@ -136,14 +142,20 @@ def handle_bookmarks_command(update, context):
             ],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        context.bot.send_message(chat_id, text=message_text, reply_markup=reply_markup)
+        await context.bot.send_message(
+            chat_id, text=message_text, reply_markup=reply_markup
+        )
     except Exception as e:
-        logging.error(f"An error occurred while handling /start command: {e}")
+        logging.error(f"An error occurred while handling /bookmarks command: {e}")
 
 
-def handle_choose_website_command(update, context):
+async def handle_choose_website_command(update, context):
     try:
-        chat_id = update.message.chat_id
+        if update.message:
+            chat_id = update.message.chat_id
+        else:
+            query = update.callback_query
+            chat_id = query.message.chat_id
         message_text = "Please choose your website from the variants"
         keyboard = [
             [
@@ -154,41 +166,52 @@ def handle_choose_website_command(update, context):
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        context.bot.send_message(chat_id, text=message_text, reply_markup=reply_markup)
+        await context.bot.send_message(
+            chat_id, text=message_text, reply_markup=reply_markup
+        )
     except Exception as e:
-        logging.error(f"An error occurred while handling /start command: {e}")
+        logging.error(
+            f"An error occurred while handling /handle_choose_website_command command: {e}"
+        )
 
 
-def set_user_manga_scans_credentials_command(update, context):
+async def set_user_manga_scans_credentials_command(update, context):
     try:
         query = update.callback_query
-        query.answer()
-        query.message.reply_text(
-            """For getting information about you bookmarks from manga-scans, please write your credentials.
-            They will be encrypted and stored for your all time available use. They will not be given any third person's or used in any ways."""
+        chat_id = query.message.chat_id
+        await query.answer()
+        await query.message.reply_text(
+            """For getting information about you bookmarks from manga-scans, please write your credentials. They will be encrypted and stored for your all time available use. They will not be given any third person's or used in any ways."""
         )
-        query.message.reply_text("Enter your username for manga-scans:")
+        await query.message.reply_text("Enter your username for manga-scans:")
         text = update.message.text
         context.user_data["username"] = text
-        update.message.reply_text("Now, enter your password:")
+        await update.message.reply_text("Now, enter your password:")
         if "username" in context.user_data:
             # User is entering password
             username = context.user_data["username"]
             password = text
             with get_db() as db:
-                update_user_website(db, update.message.chat_id, 1, username, password)
+                update_user_website(db, chat_id, 1, username, password)
             context.user_data.clear()
-        update.message.reply_text(
+        await update.message.reply_text(
             "All done! Now you can get your information about your bookmarks."
         )
     except Exception as e:
         context.user_data.clear()
-        logging.error(f"An error occurred while handling update now command: {e}")
+        logging.error(
+            f"An error occurred while handling set_user_manga_scans_credentials_command command: {e}"
+        )
 
 
 async def update_now_command(update, context):
     try:
-        manual_update(update.message.chat_id)
+        if update.message:
+            chat_id = update.message.chat_id
+        else:
+            query = update.callback_query
+            chat_id = query.message.chat_id
+        manual_update(chat_id)
     except Exception as e:
         logging.error(f"An error occurred while handling update now command: {e}")
     await update.message.reply_text("All your bookmarks have been updated.")
@@ -220,7 +243,10 @@ async def list_and_send_bookmarks_command(
             disable_web_page_preview=True,
         )
 
-    chat_id = update.message.chat_id
+    if update.message:
+        chat_id = update.message.chat_id
+    else:
+        chat_id = query.message.chat_id
     query = update.callback_query
     with get_db() as db:
         try:
@@ -236,26 +262,34 @@ async def list_and_send_bookmarks_command(
     await send_paginated_message(query.message, bookmarks_list, page, page_size)
 
 
-def set_user_active_command(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
+async def set_user_active_command(update: Update, context: CallbackContext):
+    if update.message:
+        chat_id = update.message.chat_id
+    else:
+        query = update.callback_query
+        chat_id = query.message.chat_id
     with get_db() as db:
         try:
             set_user_status(db, chat_id, True)
             message_text = "Your notification status setup active"
-            context.bot.send_message(chat_id, text=message_text)
+            await context.bot.send_message(chat_id, text=message_text)
         except Exception as e:
             logging.error(
                 f"An error occurred while handling set user active command: {e}"
             )
 
 
-def set_user_inactive_command(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
+async def set_user_inactive_command(update: Update, context: CallbackContext):
+    if update.message:
+        chat_id = update.message.chat_id
+    else:
+        query = update.callback_query
+        chat_id = query.message.chat_id
     with get_db() as db:
         try:
             set_user_status(db, chat_id, False)
             message_text = "Your notification status setup inactive"
-            context.bot.send_message(chat_id, text=message_text)
+            await context.bot.send_message(chat_id, text=message_text)
         except Exception as e:
             logging.error(
                 f"An error occurred while handling set user inactive command: {e}"
@@ -263,10 +297,13 @@ def set_user_inactive_command(update: Update, context: CallbackContext):
 
 
 async def check_updates_command(update: Update, context: CallbackContext) -> None:
-    chat_id = update.message.chat_id
+    if update.message:
+        chat_id = update.message.chat_id
+    else:
+        query = update.callback_query
+        chat_id = query.message.chat_id
     with get_db() as db:
         try:
-            query = update.callback_query
             recent_updates = get_recent_bookmarks(db, chat_id)
             # Now use 'query.message' to send a reply
             for manga_update in recent_updates:

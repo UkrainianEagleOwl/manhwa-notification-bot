@@ -8,30 +8,30 @@ from src.bot.handler import *
 
 async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    query.answer()  # This is necessary to acknowledge the button press
+    await query.answer()  # This is necessary to acknowledge the button press
     chat_id = query.message.chat_id
     data = query.data
 
     if data == BUTTON_START_BOOKMARKS:
-        handle_bookmarks_command(update, context)
+        await handle_bookmarks_command(update, context)
     elif data == BUTTON_START_DISABLE_USER:
-        set_user_inactive_command(update, context)
+        await set_user_inactive_command(update, context)
     elif data == BUTTON_START_ENABLE_USER:
-        set_user_active_command(update, context)
+        await set_user_active_command(update, context)
     elif data == BUTTON_START_NOTIFICATION_TIME:
         # Handle showing recent updates
         pass
     elif data == BUTTON_START_UPDATE_DATA_BASE:
-        update_now_command(update, context, chat_id)
+        await update_now_command(update, context, chat_id)
     elif data == BUTTON_MANGA_WEBSITE_CHOICE:
-        handle_choose_website_command(update, context)
+        await handle_choose_website_command(update, context)
     elif data == BUTTON_MANGA_RECENT_UPDATE:
-        check_updates_command(update, context)
+        await check_updates_command(update, context)
     elif data == BUTTON_MANGA_WEBSITE_MANGA_SCANS:
-        set_user_manga_scans_credentials_command(update, context)
-        update_now_command(update, context, chat_id)
+        await set_user_manga_scans_credentials_command(update, context)
+        await update_now_command(update, context, chat_id)
     elif data == BUTTON_MANGA_ALL_BOOKMARKS:
-        list_and_send_bookmarks_command(update, context)
+        await list_and_send_bookmarks_command(update, context)
     # If the user is navigating the pages, use the stored data.
     elif data.startswith("prev_") or data.startswith("next_"):
         # Extract the action and page number from the callback data

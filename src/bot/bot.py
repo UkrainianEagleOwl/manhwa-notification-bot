@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram import Update, BotCommand
 from src.utils.log import logger
 from telegram.ext import (
@@ -92,4 +93,13 @@ def run_bot() -> None:
     ]
 
     # Start the bot
-    application.run_polling()
+    # Make sure to create a new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        # Use `run_until_complete` and `application.run_polling` with the loop
+        loop.run_until_complete(application.run_polling())
+    finally:
+        # Close the loop at the end to clean up properly
+        loop.close()
