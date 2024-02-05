@@ -2,6 +2,7 @@ from src.bot.format_utils import format_bookmarks_page, create_pagination_button
 from telegram.ext import CallbackContext
 from telegram import Update
 from src.bot.handler import *
+from src.bot.conversation_handler import start_set_credentials
 
 # Define the button callback data
 
@@ -28,7 +29,7 @@ async def button(update: Update, context: CallbackContext) -> None:
     elif data == BUTTON_MANGA_RECENT_UPDATE:
         await check_updates_command(update, context)
     elif data == BUTTON_MANGA_WEBSITE_MANGA_SCANS:
-        await set_user_manga_scans_credentials_command(update, context)
+        await start_set_credentials(update, context)
         await update_now_command(update, context, chat_id)
     elif data == BUTTON_MANGA_ALL_BOOKMARKS:
         await list_and_send_bookmarks_command(update, context)

@@ -7,8 +7,12 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     CallbackContext,
+    ConversationHandler,
+    MessageHandler,
+    filters,
 )
 from src.bot.buttons import button
+from src.bot.conversation_handler import *
 from src.bot.handler import (
     handle_start_command,
     handle_bookmarks_command,
@@ -65,6 +69,19 @@ def run_bot() -> None:
         CommandHandler("disable_notification", set_user_inactive_command)
     )
     application.add_handler(CommandHandler("get_updates_titles", check_updates_command))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("setcredentials", start_set_credentials)],
+        states={
+            USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, username)],
+            PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, password)],
+        },
+        fallbacks=[
+            CommandHandler("cancel", cancel)
+        ],  # Implement a cancel function to end the conversation
+    )
+
+    # Add the ConversationHandler to your Application
+    application.add_handler(conv_handler)
     # Callback Query Handler for buttons
     application.add_handler(CallbackQueryHandler(button))
 

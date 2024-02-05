@@ -174,34 +174,33 @@ async def handle_choose_website_command(update, context):
             f"An error occurred while handling /handle_choose_website_command command: {e}"
         )
 
-
-async def set_user_manga_scans_credentials_command(update, context):
-    try:
-        query = update.callback_query
-        chat_id = query.message.chat_id
-        await query.answer()
-        await query.message.reply_text(
-            """For getting information about you bookmarks from manga-scans, please write your credentials. They will be encrypted and stored for your all time available use. They will not be given any third person's or used in any ways."""
-        )
-        await query.message.reply_text("Enter your username for manga-scans:")
-        text = update.message.text
-        context.user_data["username"] = text
-        await update.message.reply_text("Now, enter your password:")
-        if "username" in context.user_data:
-            # User is entering password
-            username = context.user_data["username"]
-            password = text
-            with get_db() as db:
-                update_user_website(db, chat_id, 1, username, password)
-            context.user_data.clear()
-        await update.message.reply_text(
-            "All done! Now you can get your information about your bookmarks."
-        )
-    except Exception as e:
-        context.user_data.clear()
-        logging.error(
-            f"An error occurred while handling set_user_manga_scans_credentials_command command: {e}"
-        )
+# async def set_user_manga_scans_credentials_command(update, context):
+#     try:
+#         query = update.callback_query
+#         chat_id = query.message.chat_id
+#         await query.answer()
+#         await query.message.reply_text(
+#             """For getting information about you bookmarks from manga-scans, please write your credentials. They will be encrypted and stored for your all time available use. They will not be given any third person's or used in any ways."""
+#         )
+#         await query.message.reply_text("Enter your username for manga-scans:")
+#         text = update.message.text
+#         context.user_data["username"] = text
+#         await update.message.reply_text("Now, enter your password:")
+#         if "username" in context.user_data:
+#             # User is entering password
+#             username = context.user_data["username"]
+#             password = text
+#             with get_db() as db:
+#                 update_user_website(db, chat_id, 1, username, password)
+#             context.user_data.clear()
+#         await update.message.reply_text(
+#             "All done! Now you can get your information about your bookmarks."
+#         )
+#     except Exception as e:
+#         context.user_data.clear()
+#         logging.error(
+#             f"An error occurred while handling set_user_manga_scans_credentials_command command: {e}"
+#         )
 
 
 async def update_now_command(update, context):
